@@ -14,3 +14,4 @@ slurm-*.out
 *.o
 
 **/build
+results/
