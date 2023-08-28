@@ -7,6 +7,7 @@ if __name__ == "__main__":
 from utils import *
 from driverprocessresults.main import *
 import sys
+import pathlib
 
 if __name__ == "__main__":
     """The file may run directly without invoking driver.py and the scaling
@@ -95,8 +96,7 @@ class Throughput:
                     wall_time=wall_time)
         print_yml_file(Path(result_path) / "run.cfg", logger)
         first_perms = list(product(db_nodes, db_cpus))
-        for i, first_perm in enumerate(first_perms, start=1):
-            dbn, dbc = first_perm
+        for i, (dbn, dbc) in enumerate(first_perms, start=1):
             # start the database only once per value in db_nodes so all permutations
             # are executed with the same database size without bringin down the database
             db = start_database(exp,
@@ -112,8 +112,7 @@ class Throughput:
             logger.debug("database created and returned")
             
             second_perms = list(product(client_nodes, clients_per_node, tensor_bytes, db_cpus, languages))
-            for j, second_perm in enumerate(second_perms, start=1):
-                c_nodes, cpn, _bytes, db_cpu, language = second_perm
+            for j, (c_nodes, cpn, _bytes, db_cpu, language) in enumerate(second_perms, start=1):
                 logger.info(f"Running permutation {i} of {len(second_perms)} for database node index {j} of {len(first_perms)}")
                 # setup a an instance of the C++ driver and start it
                 throughput_session = self._create_throughput_session(exp,
@@ -137,8 +136,8 @@ class Throughput:
             exp.stop(db)
             #Added to clean up db folder bc of issue with exp.stop()
             time.sleep(5)
-            check_database_folder(result_path, logger)
-        self.process_scaling_results(scaling_results_dir=exp_name, plot_type=plot)
+            # check_database_folder(result_path, logger)
+        # self.process_scaling_results(scaling_results_dir=exp_name, plot_type=plot)
     
     @classmethod
     def _create_throughput_session(cls,
@@ -172,13 +171,28 @@ class Throughput:
         :return: Model reference to the throughput session to launch
         :rtype: Model
         """
-        settings = exp.create_run_settings(f"./{language}-throughput/build/throughput", str(_bytes), run_args=node_feature)
+        if language == "python":
+            scaling_repo_root = pathlib.Path(__file__).parent.parent
+            settings = exp.create_run_settings(
+                sys.executable,
+                [
+                    str(scaling_repo_root / "py-throughput/throughput_scaling.py"),
+                    str(_bytes)
+                ],
+                run_args=node_feature,
+            )
+        else:
+            settings = exp.create_run_settings(
+                f"./{language}-throughput/build/throughput",
+                str(_bytes),
+                run_args=node_feature
+            )
         cluster = 1 if db_nodes > 1 else 0
         settings.set_tasks(nodes * tasks)
         settings.set_tasks_per_node(tasks)
         settings.update_env({
             "SS_ITERATIONS": str(iterations),
-            "SS_CLUSTER": cluster
+            "SS_CLUSTER": str(cluster),
         })
         # TODO replace with settings.set("nodes", condition==exp.launcher=="slurm")
         if exp._launcher == "slurm":

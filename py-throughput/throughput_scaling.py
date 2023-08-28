@@ -6,14 +6,15 @@ import sys
 import typing as t
 import time
 
-import mpi4py as MPI
+from mpi4py import MPI
 import numpy as np
 import smartredis
 
 if t.TYPE_CHECKING:
     import numpy.typing as npt
+    from typing_extensions import ParamSpec
 
-    PR = t.ParamSpec("PR")
+    PR = ParamSpec("PR")
     T = t.TypeVar("T")
 
 
@@ -46,7 +47,8 @@ def my_timeit(fn: t.Callable[PR, T], /) -> t.Callable[PR, tuple[float, T]]:
 # hooks to replace w/ alt backend >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 if t.TYPE_CHECKING:
-    TClient: t.TypeAlias = smartredis.Client
+    from typing_extensions import TypeAlias
+    TClient: TypeAlias = smartredis.Client
 
 
 @my_timeit
@@ -99,12 +101,18 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
     # Keys are overwritten in order to help
     # ensure that the database does not run out of memory
     # for large messages.
-    for i in range(iterations):
+    for _ in range(iterations):
         key = f"throughput_rank_{rank}"
-        delta_t, _ = put_tensor(client, rank, array)
+        delta_t, _ = put_tensor(client, key, array)
         put_tensor_times.append(delta_t)
 
-        delta_t, _ = get_tensor(client, key)
+        delta_t, got = get_tensor(client, key)
+        if not np.array_equal(array, got):
+            # Ideally this block is never entered
+            print(
+                f"WARNING: received array does not look like the sent array",
+                file=sys.stderr,
+            )
         get_tensor_times.append(delta_t)
 
     # loop_end = MPI.Wtime()
