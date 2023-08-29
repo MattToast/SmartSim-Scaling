@@ -36,7 +36,7 @@ class Throughput:
                            iterations=3,
                            tensor_bytes=[1024,8192,16384,32769,65538,
                                           131076,262152,524304,1024000],
-                           languages=["cpp"],
+                           languages=["cpp", "python"],
                            wall_time="05:00:00",
                            plot="database_nodes",
                            smartsim_logging=False):
