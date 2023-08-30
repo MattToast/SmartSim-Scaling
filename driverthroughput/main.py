@@ -96,6 +96,7 @@ class Throughput:
                     wall_time=wall_time)
         print_yml_file(Path(result_path) / "run.cfg", logger)
         first_perms = list(product(db_nodes, db_cpus))
+        # seen = True
         for i, (dbn, dbc) in enumerate(first_perms, start=1):
             # start the database only once per value in db_nodes so all permutations
             # are executed with the same database size without bringin down the database
@@ -113,7 +114,21 @@ class Throughput:
             
             second_perms = list(product(client_nodes, clients_per_node, tensor_bytes, db_cpus, languages))
             for j, (c_nodes, cpn, _bytes, db_cpu, language) in enumerate(second_perms, start=1):
-                logger.info(f"Running permutation {i} of {len(second_perms)} for database node index {j} of {len(first_perms)}")
+                # if seen:
+                #     # keep skipping until this set of params
+                #     if all([
+                #         c_nodes == 32,
+                #         cpn == 16,
+                #         dbn == 16,
+                #         db_cpu == 36,
+                #         _bytes == 1024000,
+                #         language == "python",
+                #     ]):
+                #         seen = False
+                #     else:
+                #         logger.info(f"Skipping previously ran iteration {i}/{len(first_perms)}, {j}/{len(second_perms)}")
+                #         continue
+                logger.info(f"Running permutation {i} of {len(first_perms)} for database node index {j} of {len(second_perms)}")
                 # setup a an instance of the C++ driver and start it
                 throughput_session = self._create_throughput_session(exp,
                                                                node_feature,

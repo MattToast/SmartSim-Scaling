@@ -1,6 +1,7 @@
 .vscode
 **/__pycache__
 **/*.swp
+**/.ipynb_checkpoints
 
 smartsim
 smartsim-0.3.0

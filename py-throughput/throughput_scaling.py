@@ -79,7 +79,7 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
         print("Connecting clients", flush=True)
 
     delta_t, client = construct_client()
-    timing_file.write(f"{rank},clinet(),{delta_t}\n")
+    timing_file.write(f"{rank},client(),{delta_t}\n")
 
     comm.Barrier()
 
@@ -101,10 +101,11 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
     # Keys are overwritten in order to help
     # ensure that the database does not run out of memory
     # for large messages.
-    for _ in range(iterations):
-        key = f"throughput_rank_{rank}"
+    key = f"throughput_rank_{rank}"
+    for i in range(iterations + 1):
         delta_t, _ = put_tensor(client, key, array)
-        put_tensor_times.append(delta_t)
+        if i:  # ignore the fist run
+            put_tensor_times.append(delta_t)
 
         delta_t, got = get_tensor(client, key)
         if not np.array_equal(array, got):
@@ -113,7 +114,8 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
                 f"WARNING: received array does not look like the sent array",
                 file=sys.stderr,
             )
-        get_tensor_times.append(delta_t)
+        if i:  # Same here, ignore first run
+            get_tensor_times.append(delta_t)
 
     # loop_end = MPI.Wtime()
     loop_end = time.monotonic()
