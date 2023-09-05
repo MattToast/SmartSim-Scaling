@@ -102,28 +102,54 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
     # ensure that the database does not run out of memory
     # for large messages.
     key = f"throughput_rank_{rank}"
-    for i in range(iterations + 1):
-        delta_t, _ = put_tensor(client, key, array)
-        if i:  # ignore the fist run
-            put_tensor_times.append(delta_t)
+    # for i in range(iterations + 1):
+    #     delta_t, _ = put_tensor(client, key, array)
+    #     if i:  # ignore the fist run
+    #         put_tensor_times.append(delta_t)
 
-        delta_t, got = get_tensor(client, key)
-        if not np.array_equal(array, got):
-            # Ideally this block is never entered
-            print(
-                f"WARNING: received array does not look like the sent array",
-                file=sys.stderr,
-            )
-        if i:  # Same here, ignore first run
-            get_tensor_times.append(delta_t)
+    #     delta_t, got = get_tensor(client, key)
+    #     if not np.array_equal(array, got):
+    #         # Ideally this block is never entered
+    #         print(
+    #             f"WARNING: received array does not look like the sent array",
+    #             file=sys.stderr,
+    #         )
+    #     if i:  # Same here, ignore first run
+    #         get_tensor_times.append(delta_t)
 
+    start = time.monotonic()
+    time.monotonic()
+    diff_time_get = time.monotonic() - start
+    
+    comm.Barrier()
+
+    put_tensor(client, key, array)  # Throw away
+    start_time = time.monotonic()
+    for i in range(iterations):
+        put_tensor(client, key, array)
+    put_tensor_times.append(time.monotonic() - start_time)
+
+    comm.Barrier()
+
+    get_tensor(client, key)  # Throw away
+    start_time = time.monotonic()
+    for i in range(iterations):
+        get_tensor(client, key)
+    get_tensor_times.append(time.monotonic() - start_time)
+
+    comm.Barrier()
+    
     # loop_end = MPI.Wtime()
     loop_end = time.monotonic()
     loop_t = loop_end - loop_start
 
+    comm.Barrier()
+    
     for put_t, get_t in zip(put_tensor_times, get_tensor_times):
         timing_file.write(f"{rank},put_tensor,{put_t}\n")
         timing_file.write(f"{rank},unpack_tensor,{get_t}\n")
+
+    timing_file.write(f"{rank},get_time,{diff_time_get}")
 
     timing_file.write(f"{rank},loop_time,{loop_t}\n")
     timing_file.flush()
