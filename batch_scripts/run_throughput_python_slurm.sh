@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -N 162
+#SBATCH -N 260
 #SBATCH --exclusive
 #SBATCH -t 10:00:00
 

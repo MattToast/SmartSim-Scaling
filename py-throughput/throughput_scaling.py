@@ -116,10 +116,6 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
     #         )
     #     if i:  # Same here, ignore first run
     #         get_tensor_times.append(delta_t)
-
-    start = time.monotonic()
-    time.monotonic()
-    diff_time_get = time.monotonic() - start
     
     comm.Barrier()
 
@@ -149,9 +145,7 @@ def run_throughput(timing_file: t.TextIO, n_bytes: int) -> None:
         timing_file.write(f"{rank},put_tensor,{put_t}\n")
         timing_file.write(f"{rank},unpack_tensor,{get_t}\n")
 
-    timing_file.write(f"{rank},get_time,{diff_time_get}")
-
-    timing_file.write(f"{rank},loop_time,{loop_t}\n")
+    # timing_file.write(f"{rank},loop_time,{loop_t}\n")
     timing_file.flush()
 
 
